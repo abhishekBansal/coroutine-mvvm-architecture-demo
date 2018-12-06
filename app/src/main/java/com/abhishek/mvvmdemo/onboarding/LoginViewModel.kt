@@ -6,13 +6,9 @@ import com.abhishek.mvvmdemo.R
 import com.abhishek.mvvmdemo.api.MockApiService
 import com.abhishek.mvvmdemo.model.Error
 import com.abhishek.mvvmdemo.model.User
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.schedulers.Schedulers
-import timber.log.Timber
+import kotlinx.coroutines.*
 
 class LoginViewModel(private val apiService: MockApiService) : ViewModel() {
-    private val disposableBag = CompositeDisposable()
     val mutableLiveData = MutableLiveData<LoginState>()
 
     fun login(email: String, password: String) {
@@ -22,26 +18,14 @@ class LoginViewModel(private val apiService: MockApiService) : ViewModel() {
         if (validationResult == User.ValidationResult.NO_ERROR) {
             // correct input go ahead and make api call
             mutableLiveData.value = LoadingState()
-            val apiResponse = apiService.login(User(email, password)).cache()
-            val errorResponse = apiResponse.filter { response -> response.error != null }
-            disposableBag.add(
-                errorResponse
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe({ response ->
-                        apiError(response.error)
-                    }, Timber::e)
-            )
-
-            disposableBag.add(
-                apiResponse
-                    .filter { response -> response.error == null }
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe({
-                        // store access token here
-                        mutableLiveData.value = LoginSuccessState()
-                    }, Timber::e)
-            )
+            GlobalScope.launch {
+                val apiResponse = performLogin(email, password)
+                if (apiResponse.error != null) {
+                    apiError(apiResponse.error)
+                } else {
+                    mutableLiveData.postValue(LoginSuccessState())
+                }
+            }
         } else {
             validationError(validationResult)
         }
@@ -49,12 +33,19 @@ class LoginViewModel(private val apiService: MockApiService) : ViewModel() {
         return
     }
 
+    private suspend fun CoroutineScope.performLogin(
+        email: String,
+        password: String
+    ) = async { apiService.login(User(email, password)) }.await()
+
     private fun apiError(error: Error?) {
         when (error?.code) {
             11 ->
-                mutableLiveData.value = LoginErrorState(
-                    error = R.string.invalid_username_or_password,
-                    errorType = ErrorType.EMAIL_AND_PASSWORD
+                mutableLiveData.postValue(
+                    LoginErrorState(
+                        error = R.string.invalid_username_or_password,
+                        errorType = ErrorType.EMAIL_AND_PASSWORD
+                    )
                 )
         }
     }
@@ -70,9 +61,5 @@ class LoginViewModel(private val apiService: MockApiService) : ViewModel() {
             User.ValidationResult.NO_ERROR ->
                 mutableLiveData.value = IdleState()
         }
-    }
-
-    fun destroy() {
-        disposableBag.dispose()
     }
 }

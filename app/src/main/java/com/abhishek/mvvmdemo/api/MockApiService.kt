@@ -3,24 +3,22 @@ package com.abhishek.mvvmdemo.api
 import com.abhishek.mvvmdemo.model.Error
 import com.abhishek.mvvmdemo.model.LoginResponse
 import com.abhishek.mvvmdemo.model.User
-import io.reactivex.Observable
-import java.util.concurrent.TimeUnit
-
+import kotlinx.coroutines.delay
 
 class MockApiService {
-    fun login(user: User): Observable<LoginResponse> {
+    suspend fun login(user: User): LoginResponse {
         val result = user.validate()
         return if (result == User.ValidationResult.NO_ERROR) {
-            if (user.username == "abhishek@gmail.com" && user.password == "1234") {
-                Observable.just(LoginResponse("accessToken", "Abhishek", "uuid", null))
-                    .delay(3, TimeUnit.SECONDS)
+            return if (user.username == "abhishek@gmail.com" && user.password == "1234") {
+                delay(3000)
+                LoginResponse("accessToken", "Abhishek", "uuid", null)
             } else {
-                Observable.just(LoginResponse(null, null, null, Error("Invalid Username or Password", 11)))
-                    .delay(3, TimeUnit.SECONDS)
+                delay(3000)
+                LoginResponse(null, null, null, Error("Invalid Username or Password", 11))
             }
         } else {
-            Observable.just(LoginResponse(null, null, null, Error(result.toString(), result.ordinal)))
-                .delay(3, TimeUnit.SECONDS)
+            delay(3000)
+            LoginResponse(null, null, null, Error(result.toString(), result.ordinal))
         }
     }
 }

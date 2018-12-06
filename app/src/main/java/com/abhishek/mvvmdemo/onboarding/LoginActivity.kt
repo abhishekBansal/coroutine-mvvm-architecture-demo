@@ -7,15 +7,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import com.abhishek.mvvmdemo.HomeActivity
 import com.abhishek.mvvmdemo.R
-import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_login.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class LoginActivity : AppCompatActivity(), Observer<LoginState> {
 
     private val loginViewModel: LoginViewModel by viewModel()
-
-    private val disposableBag: CompositeDisposable = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,11 +82,5 @@ class LoginActivity : AppCompatActivity(), Observer<LoginState> {
     private fun goToHome() {
         startActivity(Intent(this, HomeActivity::class.java))
         finish()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        disposableBag.dispose()
-        loginViewModel.destroy()
     }
 }
